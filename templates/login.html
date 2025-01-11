@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>V3rtex | Login</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #2e2e2e; /* Charcoal Gray */
+            color: #e0e0e0; /* Light Gray for text */
+        }
+
+        header {
+            background-color: #2c003e; /* Midnight Purple */
+            color: #ffffff; /* White text */
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        main {
+            max-width: 40vw;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #3e3e3e; /* Lighter Gray for the main area */
+            border-radius: 8px;
+            color: #ffffff; /* White text for readability */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        label {
+            margin: 10px 0 5px;
+            display: block;
+            color: #00aaff; /* Neon Blue for labels */
+        }
+
+        input[type="text"],
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #444; /* Darker Gray for input borders */
+            border-radius: 4px;
+            box-sizing: border-box;
+            background-color: #1c1c1c; /* Slightly darker background for input fields */
+            color: #e0e0e0; /* Light Gray text */
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #2c003e; /* Midnight Purple */
+            color: #ffffff; /* White text */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #8a2be2; /* Vivid Purple */
+            transform: scale(1.05);
+        }
+
+        a {
+            color: #00aaff; /* Neon Blue for links */
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: #8a2be2; /* Vivid Purple for link hover */
+        }
+
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+            color: #ffbf00; /* Amber Yellow for status messages */
+        }
+    </style>
+</head>
+<body>
+    <header>
+    <h1>V3rtex | Login</h1>
+    </header>
+    <main>
+        <label for="K3rnelServerAddress">K3rnel Server:</label>
+        <input type="text" id="K3rnelServerAddress" name="K3rnelServerAddress" placeholder="Enter the K3rnel server address" required>
+        <br/>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" placeholder="Enter your username" required>
+        <br/>
+        <label for="privateKeyFile">Private Key File:</label>
+        <input type="file" id="privateKeyFile" name="privateKeyFile" required>
+        <br/>
+        <label for="publicKeyFile">Public Key File:</label>
+        <input type="file" id="publicKeyFile" name="publicKeyFile" required>
+        <br/>
+        <a href="/register">Don't have an account?</a>
+        <p>Please note that all accounts are for the specified K3rnel server. You will need to make a new account for every server.</p>
+        <button id="login">Login!</button>
+    </main>
+    <script>
+        document.getElementById("login").onclick = () => {
+            const serverAddr = document.getElementById("K3rnelServerAddress").value;
+            if (serverAddr.trim() !== "") {
+                localStorage.setItem("K3rnelServerAddress", serverAddr);
+            } else {
+                window.location.reload();
+            }
+            const username = document.getElementById("username").value;
+            if (username.trim() !== "") {
+                localStorage.setItem("K3rnelUsername", username);
+            } else {
+                window.location.reload();
+            }
+            const privateKeyFileInput = document.getElementById("privateKeyFile");
+            const privateKeyFile = privateKeyFileInput.files[0];
+
+            if (privateKeyFile) {
+                const reader = new FileReader();
+
+                reader.onload = async function(e) {
+                    const privateKey = e.target.result;
+
+                    try {
+                        const hashedKey = await hashPrivateKey(privateKey);
+                        localStorage.setItem("privateKeyHashed", hashedKey);
+                        localStorage.setItem("privateKey", privateKey);
+                    } catch (error) {
+                        console.error("Error hashing private key:", error);
+                        window.location.reload(); // Reload to handle errors gracefully
+                    }
+                };
+
+                reader.readAsText(privateKeyFile);
+            } else {
+                window.location.reload();
+            }
+
+            
+            const publicKeyFileInput = document.getElementById("publicKeyFile");
+            const publicKeyFile = publicKeyFileInput.files[0];
+
+            if (publicKeyFile) {
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    const publicKey = e.target.result;
+                    localStorage.setItem("publicKey", publicKey);
+                };
+
+                reader.readAsText(publicKeyFile);
+            } else {
+                window.location.reload();
+            }
+
+            localStorage.setItem("createAccount", 0);
+
+            window.location = "/";
+        }
+
+        async function hashPrivateKey(privateKey) {
+            // Hash the private key using SHA256
+            const hashedKey = CryptoJS.SHA256(privateKey).toString();
+
+            return hashedKey;
+        }
+    </script>
+</body>
+</html>

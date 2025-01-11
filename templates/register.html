@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>V3rtex | Register</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #2e2e2e; /* Charcoal Gray */
+            color: #e0e0e0; /* Light Gray for text */
+        }
+
+        header {
+            background-color: #2c003e; /* Midnight Purple */
+            color: #ffffff; /* White text */
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        main {
+            max-width: 40vw;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #3e3e3e; /* Lighter Gray for the main area */
+            border-radius: 8px;
+            color: #ffffff; /* White text for readability */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        label {
+            margin: 10px 0 5px;
+            display: block;
+            color: #00aaff; /* Neon Blue for labels */
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #444; /* Darker Gray for input borders */
+            border-radius: 4px;
+            box-sizing: border-box;
+            background-color: #1c1c1c; /* Slightly darker background for input fields */
+            color: #e0e0e0; /* Light Gray text */
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #2c003e; /* Midnight Purple */
+            color: #ffffff; /* White text */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #8a2be2; /* Vivid Purple */
+            transform: scale(1.05);
+        }
+
+        a {
+            color: #00aaff; /* Neon Blue for links */
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: #8a2be2; /* Vivid Purple for link hover */
+        }
+
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+            color: #ffbf00; /* Amber Yellow for status messages */
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>V3rtex | Register</h1>
+    </header>
+    <main>
+        <label for="K3rnelServerAddress">K3rnel Server:</label>
+        <input type="text" id="K3rnelServerAddress" name="K3rnelServerAddress" placeholder="Enter the K3rnel server address" required>
+        <br/>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" placeholder="Enter your username" required>
+        <br/>
+        <a href="/login">Already have an account?</a>
+        <p>Please note that all accounts are for the specified K3rnel server. You will need to make a new account for every server.</p>
+        <button id="register">Register!</button>
+    </main>
+    <script>
+document.getElementById("register").onclick = async () => {
+    const serverAddr = document.getElementById("K3rnelServerAddress").value;
+    const username = document.getElementById("username").value;
+
+    if (serverAddr.trim() !== "") {
+        localStorage.setItem("K3rnelServerAddress", serverAddr);
+    } else {
+        window.location.reload();
+        return;
+    }
+
+    if (username.trim() !== "") {
+        localStorage.setItem("K3rnelUsername", username);
+    } else {
+        window.location.reload();
+        return;
+    }
+
+    // Generate RSA Key Pair
+    const keyPair = await generateKeyPair();
+
+    // Save the private key, hashed private key, and public key to localStorage
+    const privateKey = keyPair.privateKey;
+    const publicKey = keyPair.publicKey;
+
+    const privateKeyHashed = hashPrivateKey(privateKey);
+
+    localStorage.setItem("privateKey", privateKey);
+    localStorage.setItem("privateKeyHashed", privateKeyHashed);
+    localStorage.setItem("publicKey", publicKey);
+
+    // Generate download links for private and public keys
+    createDownloadLink("privateKey.txt", privateKey);
+    createDownloadLink("publicKey.txt", publicKey);
+
+    localStorage.setItem("createAccount", 1);
+
+    // Add a small delay before redirecting to ensure the download happens
+    setTimeout(() => {
+        window.location = "/";
+    }, 5000); // 5,000 ms = 5-second delay
+    document.getElementById("register").innerText = "Downloading keys...";
+};
+
+async function generateKeyPair() {
+    const rsaKey = await window.crypto.subtle.generateKey(
+        {
+            name: "RSA-PSS",
+            modulusLength: 2048,
+            publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+            hash: "SHA-256",
+        },
+        true, // Extractable
+        ["sign", "verify"]
+    );
+
+    const privateKeyPem = await exportKey(rsaKey.privateKey, "pkcs8"); // Export private key in pkcs8 format
+    const publicKeyPem = await exportKey(rsaKey.publicKey, "spki");   // Export public key in spki format
+
+    return {
+        privateKey: privateKeyPem,
+        publicKey: publicKeyPem
+    };
+}
+
+async function exportKey(key, format) {
+    const exported = await window.crypto.subtle.exportKey(format, key);
+    const exportedAsBase64 = arrayBufferToBase64(exported);
+    return exportedAsBase64;
+}
+
+function arrayBufferToBase64(buffer) {
+    const uint8Array = new Uint8Array(buffer);
+    let binary = '';
+    uint8Array.forEach(byte => {
+        binary += String.fromCharCode(byte);
+    });
+    return window.btoa(binary);
+}
+
+function hashPrivateKey(privateKey) {
+    // Hash the private key using SHA256
+    const hashedKey = CryptoJS.SHA256(privateKey).toString();
+    return hashedKey;
+}
+
+function createDownloadLink(filename, content) {
+    const link = document.createElement("a");
+    const blob = new Blob([content], { type: "text/plain" });
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+    </script>
+</body>
+</html>

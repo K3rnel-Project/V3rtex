@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>V3rtex - a client for K3rnel, the decentralized communication protocol</title>
+</head>
+<body>
+  <h1>V3rtex | Home</h1>
+  <p>This K3rnel client is currently only for testing and is not ready to be released to the public.</p>
+  <div id="messages"></div>
+  <input type="text" id="messageInput" placeholder="Type your message">
+  <button id="sendButton">Send</button>
+
+  <script>
+    if (localStorage.getItem("K3rnelServerAddress") === null) {
+      window.location = "/login";
+    }
+    if (localStorage.getItem("K3rnelUsername") === null) {
+      window.location = "/login";
+    }
+    if (localStorage.getItem("privateKeyHashed") === null) {
+      window.location = "/login";
+    }
+    if (localStorage.getItem("privateKey") === null) {
+      window.location = "/login";
+    }
+    if (localStorage.getItem("publicKey") === null) {
+      window.location = "/login";
+    }
+
+    const ws = new WebSocket("wss://" + localStorage.getItem("K3rnelServerAddress") + ":5381");
+    const username = localStorage.getItem("K3rnelUsername");
+    const privateKeyHashed = localStorage.getItem("privateKeyHashed");
+    const privateKey = localStorage.getItem("privateKey");
+    const publicKey = localStorage.getItem("publicKey");
+    const createAccount = parseInt(localStorage.getItem("createAccount"));
+    ws.onopen = () => {
+      console.log("Connected to WebSocket bridge.");
+      console.log("Setting username " + username + "...");
+      ws.send(JSON.stringify({"type": "setUsername", "username": username}))
+      if (createAccount === 1) {
+        console.log("Creating account with hashed private key...");
+        ws.send(JSON.stringify({"type": "authAndSetPrivateKey", "privateKey": privateKeyHashed})) // Send only the hashed private key over the network for security
+        localStorage.setItem("createAccount", 0);
+      }
+      else {
+        console.log("Logging in with hashed private key...");
+        ws.send(JSON.stringify({"type": "authWithPrivateKey", "privateKey": privateKeyHashed})) // Send only the hashed private key over the network for security
+      }
+    };
+
+    ws.onmessage = (event) => {
+      console.log(event.data);
+      data = JSON.parse(event.data);
+      if (data['type'] === "error") {
+        window.location.reload();
+      }
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket connection closed.");
+    };
+
+    document.getElementById("sendButton").onclick = () => {
+      const input = document.getElementById("messageInput");
+      ws.send(input.value);
+      input.value = ""; // Clear input
+    };
+  </script>
+</body>
+</html>
